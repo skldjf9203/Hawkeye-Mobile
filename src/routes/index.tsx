@@ -140,12 +140,12 @@ function DashboardPage() {
 
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-1">
-                <Label htmlFor="email">Work Email</Label>
+                <Label htmlFor="email">Email Address</Label>
                 <div className="relative">
                   <Input 
                     id="email" 
                     type="email" 
-                    placeholder="name@bunnys.com" 
+                    placeholder="demo1@bunnys.com" 
                     required 
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -154,13 +154,13 @@ function DashboardPage() {
               </div>
               <div className="space-y-1">
                 <div className="flex justify-between items-center mb-1">
-                  <Label htmlFor="password">Security Token</Label>
+                  <Label htmlFor="password">Password</Label>
                   <button type="button" className="text-[10px] font-bold text-gold uppercase hover:underline">Forgot?</button>
                 </div>
                 <Input 
                   id="password" 
                   type="password" 
-                  placeholder="••••••••" 
+                  placeholder="Your password" 
                   required 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -172,9 +172,9 @@ function DashboardPage() {
                 className="w-full py-6 text-base font-bold shadow-navy/20" 
                 disabled={authLoading}
               >
-                {authLoading ? 'Verifying...' : (
+                {authLoading ? 'Signing in...' : (
                   <>
-                    Authorize Connection
+                    Sign In to Portal
                     <LogIn size={18} className="ml-2" />
                   </>
                 )}
@@ -300,7 +300,12 @@ function DashboardPage() {
               <Download size={20} className="mr-2" />
               Generate Report
            </Button>
-           <Button variant="primary" size="lg" className="shadow-2xl px-10">
+           <Button 
+             variant="primary" 
+             size="lg" 
+             className="shadow-2xl px-10"
+             onClick={() => navigate({ to: '/posm' })}
+           >
               <Plus size={20} className="mr-2" />
               New Submission
            </Button>
