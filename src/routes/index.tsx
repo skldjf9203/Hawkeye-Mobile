@@ -20,8 +20,7 @@ function DashboardPage() {
   const [authLoading, setAuthLoading] = React.useState(false);
   const navigate = useNavigate();
 
-  const isConfigMissing = (!process.env.VITE_SUPABASE_URL && !import.meta.env.VITE_SUPABASE_URL) || 
-    ((process.env.VITE_SUPABASE_URL?.includes('placeholder') || import.meta.env.VITE_SUPABASE_URL?.includes('placeholder')) && !supabase.storage); // Fallback: if supabase client is initialized, it might still work
+  const isConfigMissing = !import.meta.env.VITE_SUPABASE_URL && !supabase.storage; 
 
   React.useEffect(() => {
     // Check for demo mode session

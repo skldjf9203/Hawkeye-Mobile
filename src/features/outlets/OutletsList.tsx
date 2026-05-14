@@ -4,6 +4,7 @@ import { Plus, Search, Store, Box, Monitor, MapPin } from 'lucide-react';
 import { DashboardCard, EmptyState, LoadingState } from '@/components/DashboardComponents';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import { STAND_TYPES, OTHER_TOOLS, DISTRIBUTORS } from '@/data/outlets';
 
 export default function OutletsList() {
