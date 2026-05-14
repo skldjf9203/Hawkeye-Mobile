@@ -1,0 +1,8 @@
+{
+  "name": "HawkSpot",
+  "description": "Field execution, POSM tracking, outlet stand inventory, and expiry reporting app for Bunnys Snacks.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": []
+}
