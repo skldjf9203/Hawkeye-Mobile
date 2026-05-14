@@ -1,4 +1,4 @@
-import { ChevronLeft, LogOut, Menu, UserCircle } from 'lucide-react';
+import { ChevronLeft, Cloud, CloudOff, LogOut, Menu, UserCircle } from 'lucide-react';
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
@@ -13,21 +13,42 @@ interface AppShellProps {
 
 export function AppShell({ children, title, showBack, onBack }: AppShellProps) {
   const [user, setUser] = React.useState<any>(null);
+  const [isConnected, setIsConnected] = React.useState<boolean | null>(null);
   const location = useLocation();
 
   React.useEffect(() => {
+    // Check for demo mode session
+    const demoUser = localStorage.getItem('hawkspot_demo_user');
+    if (demoUser) {
+      setUser(JSON.parse(demoUser));
+    }
+
+    // Check connection
+    supabase.from('posm_submissions').select('id', { count: 'exact', head: true })
+      .then(({ error }) => {
+        setIsConnected(!error || error.code !== 'PGRST301'); 
+      })
+      .catch(() => setIsConnected(false));
+    
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+      }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      if (session?.user) {
+        setUser(session.user);
+      } else if (!localStorage.getItem('hawkspot_demo_user')) {
+        setUser(null);
+      }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const handleLogout = async () => {
+    localStorage.removeItem('hawkspot_demo_user');
     await supabase.auth.signOut();
     window.location.href = '/';
   };
@@ -63,6 +84,15 @@ export function AppShell({ children, title, showBack, onBack }: AppShellProps) {
         </div>
         
         <div className="flex items-center gap-3">
+          {isConnected !== null && (
+            <div className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-full text-[8px] font-bold uppercase tracking-wider",
+              isConnected ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"
+            )}>
+              {isConnected ? <Cloud size={10} /> : <CloudOff size={10} />}
+              {isConnected ? 'Sync Online' : 'Sync Offline'}
+            </div>
+          )}
           {user && (
             <div className="flex items-center gap-3">
               <div className="hidden sm:block text-right">

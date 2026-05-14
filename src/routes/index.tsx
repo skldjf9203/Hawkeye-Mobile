@@ -24,6 +24,12 @@ function DashboardPage() {
     (process.env.VITE_SUPABASE_URL?.includes('placeholder') || process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('placeholder'));
 
   React.useEffect(() => {
+    // Check for demo mode session
+    const demoUser = localStorage.getItem('hawkspot_demo_user');
+    if (demoUser) {
+      setUser(JSON.parse(demoUser));
+    }
+
     if (isConfigMissing) {
       setLoading(false);
       return;
@@ -180,7 +186,9 @@ function DashboardPage() {
                 variant="gold"
                 className="w-full py-4 text-xs font-bold" 
                 onClick={() => {
-                  setUser({ email: 'demo@bunnys.com', user_metadata: { role: 'admin' } });
+                  const mockUser = { email: 'demo@hawkspot.com', user_metadata: { role: 'admin' }, isDemo: true };
+                  localStorage.setItem('hawkspot_demo_user', JSON.stringify(mockUser));
+                  setUser(mockUser);
                   toast.success('Entering Demo Mode...');
                 }}
               >

@@ -12,6 +12,7 @@ export default function PosmList() {
   const [search, setSearch] = React.useState('');
   const [filterArea, setFilterArea] = React.useState('');
   const [showForm, setShowForm] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const fetchSubmissions = async () => {
     setLoading(true);
@@ -32,6 +33,61 @@ export default function PosmList() {
       toast.error('Failed to fetch data: ' + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    const formData = new FormData(e.currentTarget);
+    const shop_name = formData.get('shop_name') as string;
+    const area = formData.get('area') as string;
+    const distributor = formData.get('distributor') as string;
+    const channel = formData.get('channel') as string;
+    const posm_type = formData.get('posm_type') as string;
+    const submission_date = formData.get('submission_date') as string;
+    const notes = formData.get('notes') as string;
+
+    try {
+      const { data, error } = await supabase.from('posm_submissions').insert([
+        {
+          shop_name,
+          area,
+          distributor,
+          channel,
+          posm_type,
+          submission_date,
+          notes,
+          created_at: new Date().toISOString()
+        }
+      ]).select();
+
+      if (error) throw error;
+      
+      toast.success('Evidence submitted successfully!');
+      if (data) {
+        setSubmissions(prev => [data[0], ...prev]);
+      }
+      setShowForm(false);
+    } catch (error: any) {
+      toast.error('Submission failed: ' + error.message);
+      console.error(error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string | number) => {
+    if (!confirm('Are you sure you want to delete this record?')) return;
+    
+    try {
+      const { error } = await supabase.from('posm_submissions').delete().eq('id', id);
+      if (error) throw error;
+      setSubmissions(prev => prev.filter(s => s.id !== id));
+      toast.success('Record deleted');
+    } catch (error: any) {
+      toast.error('Deletion failed: ' + error.message);
     }
   };
 
@@ -118,75 +174,77 @@ export default function PosmList() {
                   <span className="text-[10px] text-muted-foreground italic">
                     {formatDate(sub.submission_date)}
                   </span>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="text-[10px] h-7 px-2">Edit</Button>
-                    <Button variant="ghost" size="sm" className="text-[10px] h-7 px-2 text-destructive hover:text-white hover:bg-destructive">Delete</Button>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="text-[10px] h-7 px-2">Edit</Button>
+                      <Button variant="ghost" size="sm" className="text-[10px] h-7 px-2 text-destructive hover:text-white hover:bg-destructive" onClick={() => handleDelete(sub.id)}>Delete</Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Form Modal Placeholder (Real implementation would be a separate feature) */}
-      {showForm && (
-        <div className="fixed inset-0 z-[100] bg-navy/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-            <Card className="w-full max-w-xl max-h-[90vh] overflow-auto shadow-2xl animate-in slide-in-from-bottom-10">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-display font-bold text-navy">New POSM Submission</h2>
-                    <Button variant="ghost" size="icon" onClick={() => setShowForm(false)}>✕</Button>
-                </div>
-                <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); toast.success('Form submitted (mock)'); setShowForm(false); }}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <Label>Shop Name</Label>
-                            <Input placeholder="Enter shop name" required />
-                        </div>
-                        <div className="space-y-1">
-                            <Label>Area</Label>
-                            <Input placeholder="Enter area" required />
-                        </div>
-                        <div className="space-y-1">
-                            <Label>Distributor</Label>
-                            <Select required>
-                                <option value="">Select Distributor</option>
-                                <option value="A&H Traders">A&H Traders</option>
-                                <option value="Liaqat Traders">Liaqat Traders</option>
-                                <option value="Others">Others</option>
-                            </Select>
-                        </div>
-                        <div className="space-y-1">
-                            <Label>Channel</Label>
-                            <Select required>
-                                <option value="Retail">Retail</option>
-                                <option value="LMT">LMT</option>
-                                <option value="Whole Sales">Whole Sales</option>
-                                <option value="Institution">Institution</option>
-                                <option value="Others">Others</option>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="space-y-1">
-                        <Label>POSM Type</Label>
-                        <Input placeholder="e.g. Rack, Banner, Standee" required />
-                    </div>
-                    <div className="space-y-1">
-                        <Label>Submission Date</Label>
-                        <Input type="date" required defaultValue={new Date().toISOString().split('T')[0]} />
-                    </div>
-                    <div className="space-y-1">
-                        <Label>Notes</Label>
-                        <textarea className="w-full px-3 py-2 border rounded-lg min-h-[80px]" placeholder="Add any notes here..." />
-                    </div>
-                    <div className="pt-4 flex gap-3">
-                        <Button variant="outline" className="flex-1" type="button" onClick={() => setShowForm(false)}>Cancel</Button>
-                        <Button variant="navy" className="flex-1" type="submit">Submit Evidence</Button>
-                    </div>
-                </form>
-            </Card>
-        </div>
-      )}
+              </Card>
+            ))}
+          </div>
+        )}
+  
+        {/* Form Modal */}
+        {showForm && (
+          <div className="fixed inset-0 z-[100] bg-navy/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+              <Card className="w-full max-w-xl max-h-[90vh] overflow-auto shadow-2xl animate-in slide-in-from-bottom-10">
+                  <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-display font-bold text-navy">New POSM Submission</h2>
+                      <Button variant="ghost" size="icon" onClick={() => setShowForm(false)} disabled={isSubmitting}>✕</Button>
+                  </div>
+                  <form className="space-y-4" onSubmit={handleSubmit}>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                              <Label htmlFor="shop_name">Shop Name</Label>
+                              <Input name="shop_name" id="shop_name" placeholder="Enter shop name" required disabled={isSubmitting} />
+                          </div>
+                          <div className="space-y-1">
+                              <Label htmlFor="area">Area</Label>
+                              <Input name="area" id="area" placeholder="Enter area" required disabled={isSubmitting} />
+                          </div>
+                          <div className="space-y-1">
+                              <Label htmlFor="distributor">Distributor</Label>
+                              <Select name="distributor" id="distributor" required disabled={isSubmitting}>
+                                  <option value="">Select Distributor</option>
+                                  <option value="A&H Traders">A&H Traders</option>
+                                  <option value="Liaqat Traders">Liaqat Traders</option>
+                                  <option value="Others">Others</option>
+                              </Select>
+                          </div>
+                          <div className="space-y-1">
+                              <Label htmlFor="channel">Channel</Label>
+                              <Select name="channel" id="channel" required disabled={isSubmitting}>
+                                  <option value="Retail">Retail</option>
+                                  <option value="LMT">LMT</option>
+                                  <option value="Whole Sales">Whole Sales</option>
+                                  <option value="Institution">Institution</option>
+                                  <option value="Others">Others</option>
+                              </Select>
+                          </div>
+                      </div>
+                      <div className="space-y-1">
+                          <Label htmlFor="posm_type">POSM Type</Label>
+                          <Input name="posm_type" id="posm_type" placeholder="e.g. Rack, Banner, Standee" required disabled={isSubmitting} />
+                      </div>
+                      <div className="space-y-1">
+                          <Label htmlFor="submission_date">Submission Date</Label>
+                          <Input name="submission_date" id="submission_date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} disabled={isSubmitting} />
+                      </div>
+                      <div className="space-y-1">
+                          <Label htmlFor="notes">Notes</Label>
+                          <textarea name="notes" id="notes" className="w-full px-3 py-2 border rounded-lg min-h-[80px]" placeholder="Add any notes here..." disabled={isSubmitting} />
+                      </div>
+                      <div className="pt-4 flex gap-3">
+                          <Button variant="outline" className="flex-1" type="button" onClick={() => setShowForm(false)} disabled={isSubmitting}>Cancel</Button>
+                          <Button variant="navy" className="flex-1" type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? 'Submitting...' : 'Submit Evidence'}
+                          </Button>
+                      </div>
+                  </form>
+              </Card>
+          </div>
+        )}
     </div>
   );
 }

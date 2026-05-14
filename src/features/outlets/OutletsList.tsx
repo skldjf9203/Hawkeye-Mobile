@@ -11,6 +11,9 @@ export default function OutletsList() {
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState('');
   const [showForm, setShowForm] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [selectedStands, setSelectedStands] = React.useState<string[]>([]);
+  const [selectedTools, setSelectedTools] = React.useState<string[]>([]);
 
   const fetchOutlets = async () => {
     setLoading(true);
@@ -27,6 +30,46 @@ export default function OutletsList() {
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    const formData = new FormData(e.currentTarget);
+    try {
+      const { data, error } = await supabase.from('outlets_info').insert([
+        {
+          shop_name: formData.get('shop_name'),
+          shop_code: formData.get('shop_code'),
+          area: formData.get('area'),
+          distributor: formData.get('distributor'),
+          stand_types: selectedStands,
+          other_tools: selectedTools,
+          created_at: new Date().toISOString()
+        }
+      ]).select();
+
+      if (error) throw error;
+      
+      toast.success('Outlet registered successfully');
+      if (data) setOutlets(prev => [...prev, data[0]]);
+      setShowForm(false);
+      setSelectedStands([]);
+      setSelectedTools([]);
+    } catch (error: any) {
+      toast.error('Registration failed: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const toggleSelection = (item: string, list: string[], setter: React.Dispatch<React.SetStateAction<string[]>>) => {
+    if (list.includes(item)) {
+      setter(list.filter(i => i !== item));
+    } else {
+      setter([...list, item]);
     }
   };
 
@@ -130,24 +173,24 @@ export default function OutletsList() {
                     <h2 className="text-2xl font-display font-bold text-navy">Register New Outlet</h2>
                     <Button variant="ghost" size="icon" onClick={() => setShowForm(false)}>✕</Button>
                 </div>
-                <form className="space-y-6">
+                <form className="space-y-6" onSubmit={handleSubmit}>
                     <div className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-1">
                                 <Label>Shop Name</Label>
-                                <Input placeholder="Outlet name" />
+                                <Input name="shop_name" placeholder="Outlet name" required disabled={isSubmitting} />
                             </div>
                             <div className="space-y-1">
                                 <Label>Shop Code (Optional)</Label>
-                                <Input placeholder="e.g. SHOP-101" />
+                                <Input name="shop_code" placeholder="e.g. SHOP-101" disabled={isSubmitting} />
                             </div>
                             <div className="space-y-1">
                                 <Label>Area</Label>
-                                <Input placeholder="Sub-city/Area name" />
+                                <Input name="area" placeholder="Sub-city/Area name" required disabled={isSubmitting} />
                             </div>
                             <div className="space-y-1">
                                 <Label>Distributor</Label>
-                                <Select>
+                                <Select name="distributor" required disabled={isSubmitting}>
                                     <option value="">Select Partner</option>
                                     {DISTRIBUTORS.map(d => <option key={d} value={d}>{d}</option>)}
                                 </Select>
@@ -161,7 +204,14 @@ export default function OutletsList() {
                                     <button 
                                       key={type}
                                       type="button"
-                                      className="px-4 py-2 bg-white border border-border rounded-lg text-sm font-medium hover:border-navy/50 transition-all active:scale-95"
+                                      onClick={() => toggleSelection(type, selectedStands, setSelectedStands)}
+                                      disabled={isSubmitting}
+                                      className={cn(
+                                        "px-4 py-2 border rounded-lg text-sm font-medium transition-all active:scale-95",
+                                        selectedStands.includes(type) 
+                                          ? "bg-navy text-white border-navy" 
+                                          : "bg-white border-border hover:border-navy/50"
+                                      )}
                                     >
                                         {type}
                                     </button>
@@ -176,7 +226,14 @@ export default function OutletsList() {
                                     <button 
                                       key={tool}
                                       type="button"
-                                      className="px-4 py-2 bg-white border border-border rounded-lg text-sm font-medium hover:border-gold/50 transition-all active:scale-95"
+                                      onClick={() => toggleSelection(tool, selectedTools, setSelectedTools)}
+                                      disabled={isSubmitting}
+                                      className={cn(
+                                        "px-4 py-2 border rounded-lg text-sm font-medium transition-all active:scale-95",
+                                        selectedTools.includes(tool) 
+                                          ? "bg-gold text-white border-gold" 
+                                          : "bg-white border-border hover:border-gold/50"
+                                      )}
                                     >
                                         {tool}
                                     </button>
@@ -186,8 +243,10 @@ export default function OutletsList() {
                     </div>
 
                     <div className="flex gap-3">
-                       <Button variant="outline" className="flex-1" type="button" onClick={() => setShowForm(false)}>Cancel</Button>
-                       <Button variant="gold" className="flex-1" type="button" onClick={() => { toast.success('Outlet registered'); setShowForm(false); }}>Create Record</Button>
+                       <Button variant="outline" className="flex-1" type="button" onClick={() => setShowForm(false)} disabled={isSubmitting}>Cancel</Button>
+                       <Button variant="gold" className="flex-1" type="submit" disabled={isSubmitting}>
+                         {isSubmitting ? 'Registering...' : 'Create Record'}
+                       </Button>
                     </div>
                 </form>
             </Card>

@@ -12,6 +12,7 @@ export default function ExpiryList() {
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState('');
   const [showForm, setShowForm] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const fetchRecords = async () => {
     setLoading(true);
@@ -47,6 +48,48 @@ export default function ExpiryList() {
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    const formData = new FormData(e.currentTarget);
+    try {
+      const { data, error } = await supabase.from('expiry_records').insert([
+        {
+          shop_name: formData.get('shop_name'),
+          sub_channel: formData.get('area_name'),
+          category: formData.get('category'),
+          sku_name: formData.get('sku_name'),
+          quantity: parseInt(formData.get('quantity') as string),
+          expiry_date: formData.get('expiry_date'),
+          created_at: new Date().toISOString()
+        }
+      ]).select();
+
+      if (error) throw error;
+      
+      toast.success('Record saved to cloud');
+      if (data) setRecords(prev => [data[0], ...prev]);
+      setShowForm(false);
+    } catch (error: any) {
+      toast.error('Failed to save: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: any) => {
+    if (!confirm('Remove this record?')) return;
+    try {
+      const { error } = await supabase.from('expiry_records').delete().eq('id', id);
+      if (error) throw error;
+      setRecords(prev => prev.filter(r => r.id !== id));
+      toast.success('Record removed');
+    } catch (error: any) {
+      toast.error('Failed to delete: ' + error.message);
     }
   };
 
@@ -132,7 +175,7 @@ export default function ExpiryList() {
                     </span>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold text-navy hover:bg-navy/5">Edit</Button>
-                      <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold text-destructive hover:bg-destructive/5">Remove</Button>
+                      <Button variant="ghost" size="sm" className="h-7 text-[10px] uppercase font-bold text-destructive hover:bg-destructive/5" onClick={() => handleDelete(record.id)}>Remove</Button>
                     </div>
                  </div>
                </Card>
@@ -141,52 +184,52 @@ export default function ExpiryList() {
         </div>
       )}
 
-      {/* Form Implementation would go here */}
-      {showForm && (
-        <div className="fixed inset-0 z-[100] bg-navy/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
-            <Card className="w-full max-w-xl max-h-[90vh] overflow-auto shadow-2xl animate-in slide-in-from-bottom-10">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-display font-bold text-navy">New Expiry Record</h2>
-                    <Button variant="ghost" size="icon" onClick={() => setShowForm(false)}>✕</Button>
-                </div>
-                <form className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <Label>Shop Name</Label>
-                            <Input placeholder="Shop name" />
-                        </div>
-                        <div className="space-y-1">
-                            <Label>Area Name</Label>
-                            <Input placeholder="Enter area" />
-                        </div>
-                        <div className="space-y-1">
-                            <Label>Category</Label>
-                            <Select>
-                                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                            </Select>
-                        </div>
-                        <div className="space-y-1">
-                            <Label>Product/SKU</Label>
-                            <Select>
-                                {SKU_MASTER.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
-                            </Select>
-                        </div>
-                        <div className="space-y-1">
-                            <Label>Quantity</Label>
-                            <Input type="number" placeholder="Enter units" />
-                        </div>
+       {/* Form Implementation */}
+       {showForm && (
+         <div className="fixed inset-0 z-[100] bg-navy/40 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+             <Card className="w-full max-w-xl max-h-[90vh] overflow-auto shadow-2xl animate-in slide-in-from-bottom-10">
+                 <div className="flex items-center justify-between mb-6">
+                     <h2 className="text-2xl font-display font-bold text-navy">New Expiry Record</h2>
+                     <Button variant="ghost" size="icon" onClick={() => setShowForm(false)} disabled={isSubmitting}>✕</Button>
+                 </div>
+                 <form className="space-y-4" onSubmit={handleSubmit}>
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                          <div className="space-y-1">
-                            <Label>Expiry Date</Label>
-                            <Input type="date" />
-                        </div>
-                    </div>
-                    <Button variant="navy" className="w-full mt-4" type="button" onClick={() => { toast.success('Record saved'); setShowForm(false); }}>
-                      Confirm Submission
-                    </Button>
-                </form>
-            </Card>
-        </div>
-      )}
+                             <Label>Shop Name</Label>
+                             <Input name="shop_name" placeholder="Shop name" required disabled={isSubmitting} />
+                         </div>
+                         <div className="space-y-1">
+                             <Label>Area Name</Label>
+                             <Input name="area_name" placeholder="Enter area" required disabled={isSubmitting} />
+                         </div>
+                         <div className="space-y-1">
+                             <Label>Category</Label>
+                             <Select name="category" required disabled={isSubmitting}>
+                                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                             </Select>
+                         </div>
+                         <div className="space-y-1">
+                             <Label>Product/SKU</Label>
+                             <Select name="sku_name" required disabled={isSubmitting}>
+                                 {SKU_MASTER.map(s => <option key={s.code} value={s.name}>{s.name}</option>)}
+                             </Select>
+                         </div>
+                         <div className="space-y-1">
+                             <Label>Quantity</Label>
+                             <Input type="number" name="quantity" placeholder="Enter units" required disabled={isSubmitting} />
+                         </div>
+                          <div className="space-y-1">
+                             <Label>Expiry Date</Label>
+                             <Input type="date" name="expiry_date" required disabled={isSubmitting} />
+                         </div>
+                     </div>
+                     <Button variant="navy" className="w-full mt-4" type="submit" disabled={isSubmitting}>
+                       {isSubmitting ? 'Saving...' : 'Confirm Submission'}
+                     </Button>
+                 </form>
+             </Card>
+         </div>
+       )}
     </div>
   );
 }
